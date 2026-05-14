@@ -24,7 +24,8 @@ jobs:
           node-version: '22'
 
       - name: 📦 安装依赖
-        run: npm install undici
+        working-directory: private
+        run: npm install undici @playwright/test
 
       - name: 🌐 安装 Playwright 浏览器
         working-directory: private
