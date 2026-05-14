@@ -56,7 +56,7 @@ jobs:
         run: npx playwright test tests/hnhost-claim.spec.js
 
       - name: 📸 上传失败截图
-        if: failure()
+        if: failure()  # 👈 只有前面的步骤失败/报错时，才会执行这一步
         uses: actions/upload-artifact@v4
         with:
           name: failure-screenshots
