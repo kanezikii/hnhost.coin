@@ -15,7 +15,7 @@ jobs:
       - name: 📥 拉取私库代码
         uses: actions/checkout@v4
         with:
-          repository: ${{ github.repository_owner }}/HnHost-Claim/tests/hnhost-claim.spec.js
+          repository: kanezikii/HnHost-Claim
           token: ${{ secrets.PRIVATE_REPO_TOKEN }}
           path: private
 
