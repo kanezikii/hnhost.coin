@@ -1,4 +1,5 @@
 name: 🎮 HnHost 每日领取金币
+
 on:
   schedule:
     - cron: '0 1 * * *'
@@ -14,7 +15,7 @@ jobs:
       - name: 📥 拉取私库代码
         uses: actions/checkout@v4
         with:
-          repository: ${{ github.repository_owner }}/HnHost-Claim
+          repository: ${{ github.repository_owner }}/HnHost-Claim-Private
           token: ${{ secrets.PRIVATE_REPO_TOKEN }}
           path: private
 
@@ -31,20 +32,31 @@ jobs:
         working-directory: private
         run: npx playwright install chromium --with-deps
 
-      - name: 🛡️ 启动 GOST 代理转发
-        if: ${{ env.GOST_PROXY != '' }}
+      # =========================================
+      # 🔥 核心修改：使用 Xray-core 替换旧版 GOST
+      # =========================================
+      - name: 🛡️ 启动 Xray 代理转发
         env:
-          GOST_PROXY: ${{ secrets.GOST_PROXY }}
+          XRAY_CONFIG: ${{ secrets.XRAY_CONFIG }}
         run: |
-          VERSION=$(curl -s https://api.github.com/repos/ginuerzh/gost/releases/latest \
-            | grep '"tag_name"' | cut -d'"' -f4 | tr -d 'v')
-          echo "📦 GOST 版本: $VERSION"
-          wget -q "https://github.com/ginuerzh/gost/releases/download/v${VERSION}/gost_${VERSION}_linux_amd64.tar.gz"
-          tar -xzf "gost_${VERSION}_linux_amd64.tar.gz"
-          chmod +x gost
-          nohup ./gost -L http://:8080 -F "$GOST_PROXY" > gost.log 2>&1 &
+          # 1. 下载 Xray-core
+          XRAY_VERSION=$(curl -s "https://api.github.com/repos/XTLS/Xray-core/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+          echo "📦 Xray 版本: $XRAY_VERSION"
+          wget -q "https://github.com/XTLS/Xray-core/releases/download/${XRAY_VERSION}/Xray-linux-64.zip"
+          unzip -q Xray-linux-64.zip -d xray_bin
+          chmod +x xray_bin/xray
+          
+          # 2. 将 Secret 中的 JSON 写入配置文件
+          echo "$XRAY_CONFIG" > xray_bin/config.json
+          
+          # 3. 后台启动 Xray
+          nohup ./xray_bin/xray -c ./xray_bin/config.json > xray.log 2>&1 &
+          
+          # 4. 等待 3 秒让 Xray 启动完毕
           sleep 3
-          curl -s -x http://127.0.0.1:8080 https://api.ipify.org \
+          
+          # 5. 验证本地 10808 端口是否连通 (测试代理出口 IP)
+          curl -s -x socks5://127.0.0.1:10808 https://api.ipify.org \
             | sed 's/\([0-9]*\.[0-9]*\.[0-9]*\.\)[0-9]*/\1xx/g'
 
       - name: 🚀 运行领币脚本
@@ -52,11 +64,13 @@ jobs:
         env:
           DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
           TG_BOT:        ${{ secrets.TG_BOT }}
-          GOST_PROXY:    http://127.0.0.1:8080
+          # 这里的端口必须和 Xray JSON 中 inbound 监听的端口 (10808) 保持一致
+          HTTP_PROXY:    socks5://127.0.0.1:10808
+          HTTPS_PROXY:   socks5://127.0.0.1:10808
         run: npx playwright test tests/hnhost-claim.spec.js
 
       - name: 📸 上传失败截图
-        if: failure()  # 👈 只有前面的步骤失败/报错时，才会执行这一步
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: failure-screenshots
