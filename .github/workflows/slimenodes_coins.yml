@@ -11,7 +11,7 @@ jobs:
       - name: 📥 拉取私库脚本
         uses: actions/checkout@v4
         with:
-          repository: ${{ github.repository_owner }}/ActionNode-Start-Private
+          repository: kanezikii/HnHost-Claim
           token: ${{ secrets.PRIVATE_REPO_TOKEN }}
           path: private
 
@@ -36,7 +36,6 @@ jobs:
 
       - name: 🔧 执行刷币任务
         env:
-          # 多账号换行写入，格式：账号名,Discord_Token
           SLIME_ACCOUNTS: ${{ secrets.SLIME_ACCOUNTS }}
           MAX_ADS:        ${{ vars.SLIME_MAX_ADS || '20' }}
           GOST_PROXY:     ${{ secrets.GOST_PROXY }}
