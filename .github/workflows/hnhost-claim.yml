@@ -39,8 +39,8 @@ jobs:
         env:
           XRAY_CONFIG: ${{ secrets.XRAY_CONFIG }}
         run: |
-          # 1. 下载 Xray-core
-          XRAY_VERSION=$(curl -s "https://api.github.com/repos/XTLS/Xray-core/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+          # 1. 下载 Xray-core (直接固定版本，防止 GitHub API 解析错误)
+          XRAY_VERSION="v1.8.24"
           echo "📦 Xray 版本: $XRAY_VERSION"
           wget -q "https://github.com/XTLS/Xray-core/releases/download/${XRAY_VERSION}/Xray-linux-64.zip"
           unzip -q Xray-linux-64.zip -d xray_bin
@@ -58,7 +58,7 @@ jobs:
           # 5. 验证本地 10808 端口是否连通 (测试代理出口 IP)
           curl -s -x socks5://127.0.0.1:10808 https://api.ipify.org \
             | sed 's/\([0-9]*\.[0-9]*\.[0-9]*\.\)[0-9]*/\1xx/g'
-
+            
       - name: 🚀 运行领币脚本
         working-directory: private
         env:
