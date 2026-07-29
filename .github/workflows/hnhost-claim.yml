@@ -39,15 +39,16 @@ jobs:
         env:
           XRAY_CONFIG: ${{ secrets.XRAY_CONFIG }}
         run: |
-          # 1. 下载 Xray-core (直接固定版本，防止 GitHub API 解析错误)
+          # 1. 下载 Xray-core (固定版本)
           XRAY_VERSION="v1.8.24"
           echo "📦 Xray 版本: $XRAY_VERSION"
           wget -q "https://github.com/XTLS/Xray-core/releases/download/${XRAY_VERSION}/Xray-linux-64.zip"
           unzip -q Xray-linux-64.zip -d xray_bin
           chmod +x xray_bin/xray
           
-          # 2. 将 Secret 中的 JSON 写入配置文件
+          # 2. 写入配置，并自动将 Xray 不支持的 "mixed" 协议替换为 "socks"
           echo "$XRAY_CONFIG" > xray_bin/config.json
+          sed -i 's/"protocol": "mixed"/"protocol": "socks"/g' xray_bin/config.json
           
           # 3. 后台启动 Xray
           nohup ./xray_bin/xray -c ./xray_bin/config.json > xray.log 2>&1 &
@@ -55,9 +56,15 @@ jobs:
           # 4. 等待 3 秒让 Xray 启动完毕
           sleep 3
           
-          # 5. 验证本地 10808 端口是否连通 (测试代理出口 IP)
-          curl -s -x socks5://127.0.0.1:10808 https://api.ipify.org \
-            | sed 's/\([0-9]*\.[0-9]*\.[0-9]*\.\)[0-9]*/\1xx/g'
+          # 5. 验证代理是否成功运行。如果失败，直接打印错误日志并阻断工作流。
+          if ! curl -s -x socks5://127.0.0.1:10808 https://api.ipify.org > /dev/null; then
+            echo "❌ 代理连接失败！Xray 可能崩溃了。下面是运行日志："
+            cat xray.log
+            exit 1
+          fi
+          
+          echo "✅ 代理启动成功！当前出口 IP："
+          curl -s -x socks5://127.0.0.1:10808 https://api.ipify.org | sed 's/\([0-9]*\.[0-9]*\.[0-9]*\.\)[0-9]*/\1xx/g'
             
       - name: 🚀 运行领币脚本
         working-directory: private
