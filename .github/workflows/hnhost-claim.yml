@@ -94,4 +94,4 @@ jobs:
           token: ${{ secrets.PRIVATE_REPO_TOKEN }}
           repository: ${{ github.repository }}
           retain_days: 1         # 只保留最近 1 天的记录
-          keep_minimum_runs: 3   # 至少保留最新的 3 次记录，防止全删光
+          keep_minimum_runs: 1   # 至少保留最新的 3 次记录，防止全删光
